@@ -8,6 +8,6 @@ class GroceryItem {
       required this.category});
   final String id;
   final String name;
-  final double quantity;
+  final int quantity;
   final Category category;
 }
