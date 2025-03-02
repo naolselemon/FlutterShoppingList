@@ -41,3 +41,7 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+
+url = Uri.https("shoppinglist-e370b-default-rtdb.firebaseio.com",
+          "shopping-list.json")
