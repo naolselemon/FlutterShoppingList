@@ -5,6 +5,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:shopping_list/data/categories.dart';
 import 'package:shopping_list/models/category.dart';
+import 'package:shopping_list/models/grocery_item.dart';
 
 class NewItem extends StatefulWidget {
   const NewItem({super.key});
@@ -16,6 +17,8 @@ class NewItem extends StatefulWidget {
 
 class _NewItemState extends State<NewItem> {
   final _formKey = GlobalKey<FormState>();
+  var _isSending = false;
+
   var _enteredName = '';
   var _enteredQuantity = 1;
   var _selectedCategory = categories[Categories.carbs]!;
@@ -33,6 +36,10 @@ class _NewItemState extends State<NewItem> {
   void _saveItem() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
+
+      setState(() {
+        _isSending = true;
+      });
 
       final url = dotenv.env["FIREBASE_URL"]!;
       final shopping = dotenv.env["SHOPPING_LIST"]!;
@@ -52,7 +59,16 @@ class _NewItemState extends State<NewItem> {
       if (!context.mounted) {
         return;
       }
-      Navigator.of(context).pop();
+
+      if (response.statusCode == 200) {
+        final newItem = json.decode(response.body);
+
+        Navigator.of(context).pop(GroceryItem(
+            id: newItem["name"],
+            name: _enteredName,
+            quantity: _enteredQuantity,
+            category: _selectedCategory));
+      }
     }
   }
 
@@ -150,20 +166,30 @@ class _NewItemState extends State<NewItem> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                        onPressed: () {
-                          _formKey.currentState!.reset();
-                          setState(() {
-                            _enteredName = '';
-                            _enteredQuantity = 1;
-                            _selectedCategory = categories[Categories.carbs]!;
-                          });
-                        },
+                        onPressed: _isSending
+                            ? null
+                            : () {
+                                _formKey.currentState!.reset();
+                                setState(() {
+                                  _enteredName = '';
+                                  _enteredQuantity = 1;
+                                  _selectedCategory =
+                                      categories[Categories.carbs]!;
+                                });
+                              },
                         child: const Text("Reset")),
                     const SizedBox(
                       width: 12,
                     ),
                     ElevatedButton(
-                        onPressed: _saveItem, child: const Text("Save"))
+                        onPressed: _isSending ? null : _saveItem,
+                        child: _isSending
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(),
+                              )
+                            : const Text("Save"))
                   ],
                 )
               ],
