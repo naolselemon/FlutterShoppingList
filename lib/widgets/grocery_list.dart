@@ -19,6 +19,7 @@ class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
 
   var _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
@@ -28,14 +29,25 @@ class _GroceryListState extends State<GroceryList> {
   }
 
   void _loadData() async {
-    await dotenv.load(
-        fileName: ".env"); // wait for dotenv then continue to next part.
-
     final firebaseUrl = dotenv.env["FIREBASE_URL"]!;
-    final apiKey = dotenv.env["SHOPPING_LIST"]!;
 
-    final url = Uri.https(firebaseUrl, apiKey);
+    final url = Uri.https(firebaseUrl, "shopping-list.json");
     final response = await http.get(url);
+
+    if (response.statusCode >= 400) {
+      setState(() {
+        _error = "Failed to fetch data. Please try again later.";
+      });
+    }
+
+    if (response.body == "null") {
+      setState(() {
+        _isLoading = false;
+      });
+
+      return;
+    }
+
     Map<String, dynamic> resData = json.decode(response.body);
 
     List<GroceryItem> loadItems = [];
@@ -75,10 +87,22 @@ class _GroceryListState extends State<GroceryList> {
     });
   }
 
-  void _removeItem(GroceryItem item) {
+  void _removeItem(GroceryItem item) async {
+    final index = _groceryItems.indexOf(item);
     setState(() {
       _groceryItems.remove(item);
     });
+
+    final firebaseUrl = dotenv.env["FIREBASE_URL"]!;
+
+    final url = Uri.https(firebaseUrl, "shopping-list/${item.id}.json");
+    final response = await http.delete(url);
+
+    if (response.statusCode >= 400) {
+      setState(() {
+        _groceryItems.insert(index, item);
+      });
+    }
   }
 
   @override
@@ -107,6 +131,11 @@ class _GroceryListState extends State<GroceryList> {
       content = const Center(child: Text('No groceries added yet.'));
     }
 
+    if (_error != null) {
+      content = Center(
+        child: Text(_error!),
+      );
+    }
     if (_isLoading) {
       content = const Center(
         child: CircularProgressIndicator(),
