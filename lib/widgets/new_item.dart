@@ -1,11 +1,10 @@
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import "package:http/http.dart" as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'package:shopping_list/data/categories.dart';
 import 'package:shopping_list/models/category.dart';
-import 'package:shopping_list/models/grocery_item.dart';
 
 class NewItem extends StatefulWidget {
   const NewItem({super.key});
@@ -21,27 +20,39 @@ class _NewItemState extends State<NewItem> {
   var _enteredQuantity = 1;
   var _selectedCategory = categories[Categories.carbs]!;
 
+  @override
+  void initState() {
+    super.initState();
+    _loadEnv();
+  }
+
+  Future<void> _loadEnv() async {
+    return await dotenv.load(fileName: ".env");
+  }
+
   void _saveItem() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
-      final url = url;
+      final url = dotenv.env["FIREBASE_URL"]!;
+      final shopping = dotenv.env["SHOPPING_LIST"]!;
+
+      final databaseUrl = Uri.https(url, shopping);
+
       final body = {
         "name": _enteredName,
         "quantity": _enteredQuantity,
         "category": _selectedCategory.title,
       };
 
-      final response = await http.post(url,
+      final response = await http.post(databaseUrl,
           headers: {"Content-Type": 'application/json'},
           body: jsonEncode(body));
-      // Navigator.pop(
-      //     context,
-      //     GroceryItem(
-      //         id: DateTime.now().toString(),
-      //         name: _enteredName,
-      //         quantity: _enteredQuantity,
-      //         category: _selectedCategory));
+
+      if (!context.mounted) {
+        return;
+      }
+      Navigator.of(context).pop();
     }
   }
 
